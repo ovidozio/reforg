@@ -13,6 +13,16 @@ local function get_last_insert_rowid()
     return tonumber(row.id)
 end
 
+local function get_source_id(title, year, uri)
+    local cursor = assert(con:execute(string.format([[
+        SELECT id FROM sources
+        WHERE title = '%s' AND year = %d AND uri = '%s';
+    ]], title, year, uri)))
+    local row = cursor:fetch({}, "a")
+    cursor:close()
+    return row and tonumber(row.id)
+end
+
 local function get_author_id(first_name, last_name)
     local cursor = assert (con:execute(string.format([[
         SELECT id FROM authors
@@ -21,7 +31,6 @@ local function get_author_id(first_name, last_name)
     ))
     local row = cursor:fetch({}, "a")
     cursor:close()
-
     return row and tonumber(row.id)
 end
 
@@ -37,22 +46,38 @@ local function insert_author(first_name, last_name)
     return author_id
 end
 
+local function association_exists(source_id, author_id)
+    local cursor = assert(con:execute(string.format([[
+        SELECT 1 FROM source_authors
+        WHERE source_id = %d AND author_id = %d;
+    ]], source_id, author_id)))
+    local row = cursor:fetch()
+    cursor:close()
+    return row ~= nil
+end
+
 local function insert_source(title, year, uri, file, note, authors)
-    assert (con:execute(string.format([[
-        INSERT INTO sources (title, year, uri, file, note)
-        VALUES ('%s', %d, '%s', '%s', '%s');
-    ]], title, year, uri, file, note)
-    ))
-
-    local source_id = get_last_insert_rowid()
-
+    -- add source if not already present
+    local source_id = get_source_id(title, year, uri)
+    if not source_id then
+        assert(con:execute(string.format([[
+            INSERT INTO sources (title, year, uri, file, note)
+            VALUES ('%s', %d, '%s', '%s', '%s');
+        ]], title, year, uri, file, note)))
+        source_id = get_last_insert_rowid()
+    else
+        return source_id
+    end
+    -- add source and author to junction table if not already present
     for _, author in ipairs(authors) do
         local author_id = insert_author(author.first_name, author.last_name)
-
-        assert (con:execute(string.format([[
-            INSERT INTO source_authors (source_id, author_id)
-            VALUES (%d, %d);
-        ]], source_id, author_id)))
+        -- Check if the association already exists
+        if not association_exists(source_id, author_id) then
+            assert(con:execute(string.format([[
+                INSERT INTO source_authors (source_id, author_id)
+                VALUES (%d, %d);
+            ]], source_id, author_id)))
+        end
     end
 end
 
@@ -66,18 +91,22 @@ local function process_toml_file(file_path)
     file:close()
     local data = toml.parse(toml_data)
 
-    local note = 'note' .. os.date('%Y%m%d%H%M%S') .. '_' .. tostring(math.random(10^5, 10^6 - 1))
-    os.execute(string.format('mkdir "%s"', soorg_directory .. '/notes/' .. note))
 
-    insert_source(
-        data.source.title,
-        data.source.year,
-        data.source.uri,
-        data.source.file,
-        note,
-        data.author
-    )
+    for _, source in ipairs(data.source) do
+        local note = 'note' .. os.date('%Y%m%d%H%M%S') .. '_' .. tostring(math.random(10^5, 10^6 - 1))
+        os.execute(string.format('mkdir "%s"', soorg_directory .. '/notes/' .. note))
+
+        insert_source(
+            source.title,
+            source.year,
+            source.uri,
+            source.file,
+            note,
+            source.author
+        )
+    end
 end
+
 
 process_toml_file(soorg_directory .. '/database/entry.toml')
 

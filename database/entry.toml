@@ -1,22 +1,31 @@
-[source]
+[[source]]
 title = "Information Geometry"
 year = 2017
 uri = "https://doi.org/10.1007/978-3-319-56478-4"
 file = "Information Geometry.pdf"
 
-[[author]]
+[[source.author]]
 first_name = "Nihat"
 last_name = "Ay"
 
-[[author]]
+[[source.author]]
 first_name = "Jürgen"
 last_name = "Jost"
 
-[[author]]
+[[source.author]]
 first_name = "Hông Vân"
 last_name = "Lê"
 
-[[author]]
+[[source.author]]
 first_name = "Lorenz"
 last_name = "Schwachhöfer"
 
+[[source]]
+title = "Algebraic Geometry"
+year = 1977
+uri = "https://doi.org/10.1007/978-1-4757-3849-0"
+file = "Algebraic Geometry.pdf"
+
+[[source.author]]
+first_name = "Robin"
+last_name = "Hartshorne"
