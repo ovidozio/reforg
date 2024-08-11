@@ -3,6 +3,20 @@ local toml = require('toml')
 
 local soorg_directory = "."
 
+local function initialize_database()
+    -- Check if the database file exists
+    local file = io.open(soorg_directory .. '/database/sources.db', 'r')
+    if file == nil then
+        -- Create database if it doesn't exist
+        os.execute(string.format('sqlite3 %s/database/sources.db < %s/database/setup_schema.sql', soorg_directory, soorg_directory))
+        print("Database created and schema applied.")
+    else
+        file:close()
+    end
+end
+
+initialize_database()
+
 local env = assert (driver.sqlite3())
 local con = assert (env:connect(soorg_directory .. '/database/sources.db'))
 
@@ -46,6 +60,7 @@ local function insert_author(first_name, last_name)
     return author_id
 end
 
+-- check for: source and authors should be unique
 local function association_exists(source_id, author_id)
     local cursor = assert(con:execute(string.format([[
         SELECT 1 FROM source_authors
@@ -81,6 +96,7 @@ local function insert_source(title, year, uri, file, note, authors)
     end
 end
 
+-- add entries from toml to sources database (without repeats)
 local function process_toml_file(file_path)
     local file, err = io.open(file_path, 'r')
     if not file then
@@ -108,8 +124,22 @@ local function process_toml_file(file_path)
 end
 
 
+-- Function to export sources to JSON using a Bash command
+local function export_sources_to_json()
+    local cmd = string.format(
+        'sqlite3 %s/database/sources.db -json "SELECT * FROM sources;" > %s/database/sources.json',
+        soorg_directory, soorg_directory
+    )
+    os.execute(cmd)
+    print("Data exported to sources.json.")
+end
+
+
 process_toml_file(soorg_directory .. '/database/entry.toml')
+export_sources_to_json()
 
 con:close()
 env:close()
+
+-- echo '' | fzf --print-query --preview "cat database/sources.json | jq {q}"
 
