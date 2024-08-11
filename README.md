@@ -12,6 +12,9 @@ From the CLI it is
 lua scripts/so-add.lua
 ```
 
+The script also has the functionality of returning a json for the data and automatically creates a note markdown file for each source.
+These notes can be managed in a zettelkasten or any other type of way, facilitated by the marskman lsp server.
+
 Once the database is up, the user can use SQL to write queries
 ```{bash}
 sqlite3 database/sources.db < "SELECT * FROM sources WHERE title LIKE '%information geometry%'"

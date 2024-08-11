@@ -96,6 +96,46 @@ local function insert_source(title, year, uri, file, note, authors)
     end
 end
 
+local function md5_hash(input)
+    -- Create a command to echo the input and pipe it to the md5 command
+    local command = string.format('echo -n "%s" | md5', input)
+
+    -- Execute the command and capture the output
+    local handle = io.popen(command)
+    local result = handle:read("*a")
+    handle:close()
+
+    -- Remove any trailing whitespace
+    return result:gsub("%s+", "")
+end
+
+-- Function to initialize the note for source
+local function init_note(source)
+    -- Concatenate source data to create a unique identifier
+    local hash_input = source.title .. source.year .. source.uri
+    local note = 'note_' .. md5_hash(hash_input)
+    -- Full path to the note directory
+    local note_file = soorg_directory .. '/notes/' .. note .. '.md'
+
+
+    -- Check if the note exists, and create it if it doesn't
+    local file_check = io.open(note_file, "r")
+    if not file_check then
+        local file, err = io.open(note_file, "w")
+        if file then
+            local file_content = string.format("# %s\n", note)
+            file:write(file_content)
+            file:close()
+        else
+            error("Failed to open file for writing: " .. (err or "Unknown error"))
+        end
+    else
+        file_check:close()
+    end
+
+    return note
+end
+
 -- add entries from toml to sources database (without repeats)
 local function process_toml_file(file_path)
     local file, err = io.open(file_path, 'r')
@@ -109,9 +149,8 @@ local function process_toml_file(file_path)
 
 
     for _, source in ipairs(data.source) do
-        local note = 'note' .. os.date('%Y%m%d%H%M%S') .. '_' .. tostring(math.random(10^5, 10^6 - 1))
-        os.execute(string.format('mkdir "%s"', soorg_directory .. '/notes/' .. note))
-
+        -- create a note space for the source and add the source to the db
+        local note = init_note(source)
         insert_source(
             source.title,
             source.year,
