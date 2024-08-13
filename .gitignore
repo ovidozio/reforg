@@ -1,5 +1,3 @@
 sources
-notes/*
-!notes
 database/sources.db
 database/sources.json
