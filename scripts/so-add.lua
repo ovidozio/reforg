@@ -123,7 +123,13 @@ local function init_note(source)
     if not file_check then
         local file, err = io.open(note_file, "w")
         if file then
-            local file_content = string.format("# %s\n", note)
+            local file_content = string.format(
+                "# %s\n\nNote for [%s](../assets/%s). Can be accessed via [unique resource indicator](%s).\n",
+                note,
+                source.title,
+                source.file,
+                source.uri
+            )
             file:write(file_content)
             file:close()
         else
